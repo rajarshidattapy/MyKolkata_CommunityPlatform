@@ -1,58 +1,37 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaUtensils, FaHeart, FaPrayingHands, FaNewspaper, FaStore } from 'react-icons/fa'
 
 function Home() {
-  const news = [
-    {
-      id: 3,
-      title: "Anandabazar Patrika today",
-      description: "এগিয়ে থাকে,এগিয়ে রাখে।",
-      image: "/ana.jpg",
-      link: "https://epaper.anandabazar.com/"
-    },
-    {
-      id: 1,
-      title: "International Book Fair '25",
-      description: "The biggest literary event of the year! This year was great!",
-      image: "/bkf.avif",
-      link: "https://kolkatabookfair.net/download-ikbf-app"
-    },
-    {
-      id: 2,
-      title: "Kolkata Derby: EB vs MB",
-      description: "The age-old rivalry continues! Don't miss the epic clash this weekend.",
-      image: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800",
-      link: "https://www.google.com/search?q=east+bengal+vs+mohun+bagan+match+today+kolkata&rlz=1C1VDKB_enIN1132IN1132&oq=east+bengal+vs+mohun+bagan+match+today+kolkata&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRigAdIBCDc3OTRqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8"
-    },
-  ];
+  const [news, setNews] = useState([])
+  const [marketplace, setMarketplace] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const marketplace = [
-    {
-      id: 1,
-      title: "Handloom Sarees - Bengal's pride.",
-      location: "Gariahat Market",
-      price: "₹1,500 onwards",
-      image: "/sare.jpg",
-      link: "https://www.orangewayfarer.com/best-saree-shops-in-kolkata/"
-    },
-    {
-      id: 2,
-      title: "Bengali Sweets - The best of the best.",
-      location: "New Market",
-      price: "₹20 onwards",
-      image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800",
-      link: "https://balarammullick.com/"
-    },
-    {
-      id: 3,
-      title: "Bongmade - Bengali Merch with a modern twist.",
-      location: "Online",
-      price: "₹199 onwards",
-      image: "/shirt.webp",
-      link: "https://bongmade.com/"
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const [newsRes, marketRes] = await Promise.all([
+          fetch('/api/news'),
+          fetch('/api/marketplace')
+        ])
+        if (!newsRes.ok || !marketRes.ok) throw new Error('Failed to fetch data')
+        const newsData = await newsRes.json()
+        const marketData = await marketRes.json()
+        setNews(newsData)
+        setMarketplace(marketData)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
     }
-  ];
+    fetchData()
+  }, [])
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
@@ -85,7 +64,7 @@ function Home() {
         <div className="flex gap-6 overflow-x-auto hide-scrollbar pb-2">
           {news.map(item => (
             <a
-              key={item.id}
+              key={item._id || item.id}
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
@@ -121,7 +100,7 @@ function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {marketplace.map(item => (
             <div
-              key={item.id}
+              key={item._id || item.id}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden flex flex-col transform hover:scale-105 focus-within:ring-2 focus-within:ring-orange-400"
             >
               <img

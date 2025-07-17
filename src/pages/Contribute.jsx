@@ -1,40 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FaInstagram, FaMeetup, FaGithub, FaPlus } from 'react-icons/fa'
 
-const communities = [
-  {
-    id: 1,
-    name: 'GDG Kolkata',
-    description: 'Google Developer Group Kolkata - Tech community',
-    link: 'https://gdg.community.dev/gdg-kolkata/',
-    icon: FaMeetup
-  },
-  {
-    id: 2,
-    name: 'TFUG Kolkata',
-    description: 'TensorFlow User Group Kolkata',
-    link: 'https://www.tensorflow.org/community/groups',
-    icon: FaMeetup
-  },
-  {
-    id: 3,
-    name: 'Calcutta Instagrammers',
-    description: 'Photography and city stories',
-    link: 'https://www.instagram.com/calcutta.instagrammers/',
-    icon: FaInstagram
-  },
-  {
-    id: 4,
-    name: 'Streets of Calcutta',
-    description: 'Daily life and culture',
-    link: 'https://www.instagram.com/streetsofcalcutta/',
-    icon: FaInstagram
-  }
-]
+const iconMap = {
+  FaInstagram,
+  FaMeetup,
+  FaGithub
+}
 
 function Contribute() {
   const [showForm, setShowForm] = useState(false)
   const [newPost, setNewPost] = useState({ title: '', content: '', link: '' })
+  const [communities, setCommunities] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    async function fetchCommunities() {
+      try {
+        setLoading(true)
+        const res = await fetch('/api/communities')
+        if (!res.ok) throw new Error('Failed to fetch communities')
+        const data = await res.json()
+        setCommunities(data)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCommunities()
+  }, [])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -42,6 +37,9 @@ function Contribute() {
     setShowForm(false)
     setNewPost({ title: '', content: '', link: '' })
   }
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>
 
   return (
     <div className="min-h-screen p-4 pt-20 pb-24">
@@ -51,33 +49,34 @@ function Contribute() {
           Join our community and share your Kolkata stories
         </p>
       </div>
-
       {/* Communities Section */}
       <div className="mb-8">
         <h2 className="text-xl font-bold mb-4">Communities</h2>
         <div className="grid gap-4">
-          {communities.map(community => (
-            <a
-              key={community.id}
-              href={community.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <community.icon className="text-orange-600" size={24} />
-              </div>
-              <div>
-                <h3 className="font-bold">{community.name}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {community.description}
-                </p>
-              </div>
-            </a>
-          ))}
+          {communities.map(community => {
+            const Icon = iconMap[community.icon] || FaMeetup
+            return (
+              <a
+                key={community._id}
+                href={community.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="card flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="bg-orange-100 p-3 rounded-lg">
+                  <Icon className="text-orange-600" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold">{community.name}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    {community.description}
+                  </p>
+                </div>
+              </a>
+            )
+          })}
         </div>
       </div>
-
       {/* Share Your Story Section */}
       <div>
         <div className="flex justify-between items-center mb-4">

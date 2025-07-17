@@ -1,64 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { FaHeart, FaTimes } from 'react-icons/fa'
+import { FaHeart, FaTimes, FaStar } from 'react-icons/fa'
 
 const DESCRIPTION_LIMIT = 180;
 
-const profiles = [
-  {
-    id: '1',
-    name: 'Victoria Memorial',
-    age: '100+',
-    bio: 'Majestic marble building dedicated to Queen Victoria. Looking for history enthusiasts!',
-    image: 'https://images.unsplash.com/photo-1558431382-27e303142255?w=800'
-  },
-  {
-    id: '2',
-    name: 'Netaji Subhash Chandra Bose',
-    age: '150+',
-    bio: 'Netaji Subhas Chandra Bose was a prominent Indian freedom fighter and leader who played a key role in India\'s struggle for independence, known for his leadership of the Indian National Army (INA) and his call for "Give me blood, and I shall give you freedom.',
-    image: 'nscb.webp'
-  },
-  {
-    id: '3',
-    name: 'Jorasanko Thakur Bari, North Kolkata',
-    age: '80+',
-    bio: 'Jorasanko Thakur Bari, the ancestral home of Rabindranath Tagore, offers visitors a glimpse into the rich cultural and literary history of Bengal, showcasing the life and legacy of the Nobel laureate.',
-    image: 'jstb.jpg'
-  },
-  {
-    id: '4',
-    name: 'Maidan',
-    age:'250+',
-    bio:'The British cleared a vast area of jungle and settlements around the fort to create an open space, primarily for military defense, which later became the Maidan.Today, it is the largest urban park in Kolkata and is often called the "Lungs of Kolkata." It covers over 1,000 acres, stretching from Raj Bhavan to the Hooghly River, and is home to landmarks like the Victoria Memorial, Eden Gardens, and Shaheed Minar.',
-    image: 'maidan.jpg'
-  },
-  {
-    id: '5',
-    name: 'Indian Museum',
-    age:'210+',
-    bio:'It was founded in 1814, making it the oldest museum in India and one of the oldest in the world.',
-    image: 'indmus.jpg'
-  },
-  {
-    id: '6',
-    name: 'Dakshineswar Kali Temple',
-    age:'170+',
-    bio:'The Dakshineswar Kali Temple is one of the most famous temples in West Bengal, dedicated to Goddess Kali. It is located on the eastern bank of the Hooghly River in Dakshineswar, Kolkata.',
-    image: 'dkt.jpg'
-  },
-
-]
-
 function Tinder() {
+  const [profiles, setProfiles] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [drag, setDrag] = useState({ x: 0, y: 0, isDragging: false, startX: 0, startY: 0 })
   const [showFeedback, setShowFeedback] = useState(false)
   const [showFeedbackInput, setShowFeedbackInput] = useState(false)
   const [feedbackText, setFeedbackText] = useState('')
-  const [pendingSwipe, setPendingSwipe] = useState(null) // {direction: 1|-1}
+  const [pendingSwipe, setPendingSwipe] = useState(null)
   const [cardVisible, setCardVisible] = useState(true)
   const [showFullDescription, setShowFullDescription] = useState(false)
+  const [userStars, setUserStars] = useState(3);
   const cardRef = useRef(null)
+
+  useEffect(() => {
+    async function fetchProfiles() {
+      try {
+        setLoading(true)
+        const res = await fetch('/api/tinder-profiles')
+        if (!res.ok) throw new Error('Failed to fetch profiles')
+        const data = await res.json()
+        setProfiles(data)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchProfiles()
+  }, [])
 
   // Animate card entrance
   useEffect(() => {
@@ -107,7 +82,7 @@ function Tinder() {
           setShowFeedback(true)
           setDrag({ x: 0, y: 0, isDragging: false, startX: 0, startY: 0 })
           if (cardRef.current) cardRef.current.style.transform = 'none'
-        }, 100)
+        }, 300) // increased for smoother animation
       }, 300)
     } else {
       if (cardRef.current) {
@@ -116,9 +91,7 @@ function Tinder() {
       }
       setDrag({ x: 0, y: 0, isDragging: false, startX: 0, startY: 0 })
     }
-    document.body.style.userSelect = ''
   }
-
   // Touch events
   const handleTouchStart = (e) => {
     setDrag({ ...drag, isDragging: true, startX: e.touches[0].clientX, startY: e.touches[0].clientY })
@@ -159,15 +132,39 @@ function Tinder() {
   }
 
   // Handler to move to next card after feedback
-  const handleFeedbackDone = () => {
+  const handleFeedbackDone = async () => {
     setShowFeedback(false)
     setShowFeedbackInput(false)
-    setFeedbackText('')
     setPendingSwipe(null)
     setCardVisible(true)
+    if (profiles[currentIndex]) {
+      // Send feedback to backend
+      try {
+        await fetch(`/api/tinder-profiles/${profiles[currentIndex]._id}/feedback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            swipeDirection: pendingSwipe?.direction === 1 ? 'right' : 'left',
+            feedbackText: feedbackText,
+            userStars: userStars
+          })
+        })
+      } catch (e) {
+        // Optionally handle error
+      }
+    }
+    setFeedbackText('')
+    setUserStars(3)
     setCurrentIndex((prev) => (prev + 1) % profiles.length)
+    // Always reset card transform after feedback
+    if (cardRef.current) {
+      cardRef.current.style.transform = 'none'
+    }
   }
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  if (error) return <div className="min-h-screen flex items-center justify-center text-red-600">{error}</div>
+  if (!profiles.length) return <div className="min-h-screen flex items-center justify-center">No profiles found.</div>
   if (currentIndex >= profiles.length) {
     return (
       <div className="min-h-screen flex items-center justify-center overflow-hidden">
@@ -235,6 +232,18 @@ function Tinder() {
               )}
             </p>
           </div>
+          {/* Display base star rating if available */}
+          {typeof profile.baseStars === 'number' && (
+            <div className="mt-2 text-xs text-gray-400 text-center">
+              External Rating: <span className="font-bold text-blue-600">{profile.baseStars.toFixed(1)}/5</span>
+            </div>
+          )}
+          {/* Display app star rating if available */}
+          {typeof profile.averageStars === 'number' && (
+            <div className="mt-1 text-sm text-gray-500 dark:text-gray-300 text-center">
+              App Rating: <span className="font-bold text-orange-600">{profile.averageStars.toFixed(1)}/5</span>
+            </div>
+          )}
         </div>
       )}
       {/* Full Description Modal */}
@@ -251,35 +260,47 @@ function Tinder() {
       )}
       {/* Feedback Popup */}
       {showFeedback && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40 animate-fadein">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 min-w-[300px] text-center animate-fadein">
-            {!showFeedbackInput ? (
-              <>
-                <div className="text-lg font-semibold mb-4">Feedback?</div>
-                <div className="flex justify-center gap-8 text-3xl">
-                  <button onClick={() => setShowFeedbackInput(true)} className="hover:scale-110 transition-transform">✅</button>
-                  <button onClick={handleFeedbackDone} className="hover:scale-110 transition-transform">❌</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-lg font-semibold mb-2">Your Feedback</div>
-                <textarea
-                  className="w-full p-2 border rounded mb-4 dark:bg-gray-700 dark:text-white"
-                  rows={3}
-                  placeholder="Type your feedback..."
-                  value={feedbackText}
-                  onChange={e => setFeedbackText(e.target.value)}
-                  autoFocus
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/60 animate-fadein">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 max-w-md w-full text-center animate-fadein">
+            <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Feedback</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">How was your experience?</p>
+            {/* Star rating input */}
+            <div className="flex justify-center mb-4">
+              {[1,2,3,4,5].map(star => (
+                <FaStar
+                  key={star}
+                  size={28}
+                  className={
+                    star <= userStars
+                      ? 'text-orange-500 cursor-pointer'
+                      : 'text-gray-300 cursor-pointer'
+                  }
+                  onClick={() => setUserStars(star)}
+                  data-testid={`star-${star}`}
                 />
-                <button
-                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                  onClick={handleFeedbackDone}
-                >
-                  Submit
-                </button>
-              </>
-            )}
+              ))}
+            </div>
+            <textarea
+              className="w-full p-3 rounded-lg border text-base dark:bg-gray-700 dark:text-white mb-4"
+              rows={3}
+              placeholder="Share your thoughts..."
+              value={feedbackText}
+              onChange={e => setFeedbackText(e.target.value)}
+            />
+            <div className="flex justify-center gap-4">
+              <button
+                className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+                onClick={handleFeedbackDone}
+              >
+                Submit
+              </button>
+              <button
+                className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-700"
+                onClick={() => { setShowFeedback(false); setShowFeedbackInput(false); setFeedbackText(''); }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
