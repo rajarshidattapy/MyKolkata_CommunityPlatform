@@ -34,6 +34,28 @@ app.use('/api/profile', profileRoutes);
 const contributeRoutes = require('./routes/contribute');
 app.use('/api/contribute', contributeRoutes);
 
+// New API routes for dynamic data
+const newsRoutes = require('./routes/news');
+app.use('/api/news', newsRoutes);
+
+const marketplaceRoutes = require('./routes/marketplace');
+app.use('/api/marketplace', marketplaceRoutes);
+
+const pandalsRoutes = require('./routes/pandals');
+app.use('/api/pandals', pandalsRoutes);
+
+const regionsRoutes = require('./routes/regions');
+app.use('/api/regions', regionsRoutes);
+
+const transportRoutes = require('./routes/transport');
+app.use('/api/transport', transportRoutes);
+
+const communitiesRoutes = require('./routes/communities');
+app.use('/api/communities', communitiesRoutes);
+
+const tinderProfilesRoutes = require('./routes/tinderProfiles');
+app.use('/api/tinder-profiles', tinderProfilesRoutes);
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
