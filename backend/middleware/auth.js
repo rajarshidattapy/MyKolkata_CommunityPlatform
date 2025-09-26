@@ -1,14 +1,27 @@
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('@clerk/clerk-sdk-node');
 
-module.exports = function (req, res, next) {
+module.exports = async function (req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'No token provided' });
+  
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    const payload = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
+    
+    req.user = {
+      id: payload.sub,
+      email: payload.email,
+      ...payload
+    };
+    
     next();
   } catch (err) {
+    console.error('Token verification failed:', err);
     res.status(401).json({ message: 'Invalid token' });
   }
 }; 

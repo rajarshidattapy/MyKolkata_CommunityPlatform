@@ -1,41 +1,33 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { SignIn, SignUp, useAuth } from '@clerk/clerk-react';
+import { Navigate, Link } from 'react-router-dom';
 
 function Login() {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [otp, setOtp] = useState('');
-  const [generatedOtp, setGeneratedOtp] = useState(''); // State to store generated OTP
-  const [isVerifying, setIsVerifying] = useState(false);
-  const { login } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
-  const handleGetOTP = (e) => {
-    e.preventDefault();
-    if (phoneNumber.length !== 10) {
-      alert('Please enter a valid 10-digit phone number');
-      return;
-    }
+  console.log('Clerk state:', { isSignedIn, isLoaded });
+  console.log('Clerk publishable key:', import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
-    const otp = generateRandomOTP();
-    setGeneratedOtp(otp); // Store the generated OTP
-    setIsVerifying(true);
-    alert(`OTP sent! For demo, use ${otp}`);
-  };
+  // Show loading while Clerk initializes
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen relative">
+        <div className="absolute inset-0 bg-black/50"></div>
+        <div className="relative min-h-screen flex flex-col items-center justify-center p-4">
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500 mx-auto mb-4"></div>
+            <p>Loading Login...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const generateRandomOTP = () => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`Generated OTP: ${otp}`);
-    return otp;
-  };
-
-  const handleVerifyOTP = (e) => {
-    e.preventDefault();
-    if (otp === generatedOtp) {
-      login();
-    } else {
-      alert('Invalid OTP. Please try again.');
-      setOtp('');
-    }
-  };
+  // Redirect if already signed in
+  if (isSignedIn) {
+    return <Navigate to="/home" replace />;
+  }
 
   return (
     <div className="min-h-screen relative">
@@ -59,69 +51,140 @@ function Login() {
           />
           <h1 className="text-2xl font-bold text-white mb-2">MyKolkata</h1>
           <p className="text-gray-200 text-center">
-            Login to explore Kolkata <span className="text-red-500">❤</span>
+            {isSignUpMode ? 'Join the community' : 'Login to explore Kolkata'} <span className="text-red-500">❤</span>
           </p>
         </div>
 
-        {/* Glassmorphism Container */}
-        <div
-          className="w-full max-w-sm p-6 rounded-lg backdrop-blur-md bg-white/30 border border-white/20 shadow-lg"
-        >
-          <form
-            onSubmit={isVerifying ? handleVerifyOTP : handleGetOTP}
-            className="space-y-6"
-          >
-            {!isVerifying ? (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Phone Number
-                </label>
-                <div className="flex gap-2">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) =>
-                      setPhoneNumber(e.target.value.replace(/\D/g, ''))
-                    }
-                    placeholder="Enter phone number"
-                    className="flex-1 p-3 border rounded-lg text-base dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                    maxLength={10}
-                    pattern="[0-9]*"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Enter OTP
-                </label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Enter 6-digit OTP"
-                  className="w-full p-3 border rounded-lg text-base dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  maxLength={6}
-                  pattern="[0-9]*"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  autoFocus
-                />
-              </div>
-            )}
-
+        {/* Toggle Buttons */}
+        <div className="w-full max-w-sm mb-6">
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-1 flex">
             <button
-              type="submit"
-              className="w-full bg-orange-600 text-white font-bold p-3 rounded-lg active:bg-orange-700 transition-colors hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+              onClick={() => setIsSignUpMode(false)}
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all duration-200 ${
+                !isSignUpMode
+                  ? 'bg-orange-500 text-white shadow-lg'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+              }`}
             >
-              {isVerifying ? 'Verify OTP' : 'Get OTP'}
+              Sign In
             </button>
-          </form>
+            <button
+              onClick={() => setIsSignUpMode(true)}
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all duration-200 ${
+                isSignUpMode
+                  ? 'bg-orange-500 text-white shadow-lg'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+        </div>
+
+        {/* Clerk Auth Component */}
+        <div className="w-full max-w-sm">
+          {!isSignUpMode ? (
+            <SignIn 
+              redirectUrl="/home"
+              signUpUrl="/signup"
+              appearance={{
+                elements: {
+                  rootBox: "mx-auto w-full",
+                  card: "bg-white/10 backdrop-blur-md border border-white/20 shadow-xl rounded-xl p-6",
+                  headerTitle: "text-white text-xl font-bold text-center mb-2",
+                  headerSubtitle: "text-gray-200 text-sm text-center mb-6",
+                  formFieldInput: "bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/50 focus:bg-white/30 transition-all",
+                  formFieldLabel: "text-white font-medium mb-2 block text-sm",
+                  formButtonPrimary: "w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg",
+                  socialButtonsBlockButton: "w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 px-6 rounded-lg transition-all duration-200 mb-4 flex items-center justify-center space-x-2 border border-gray-300 shadow-md",
+                  alternativeMethodsBlockButton: "w-full bg-blue-500/10 border border-blue-300/30 hover:bg-blue-500/20 hover:border-blue-300/50 text-blue-200 font-medium py-2 px-4 rounded-lg transition-all duration-200 mb-2 flex items-center justify-center space-x-2",
+                  footerActionLink: "text-orange-300 hover:text-orange-200 font-medium transition-colors",
+                  dividerLine: "bg-white/20",
+                  dividerText: "text-gray-300 bg-transparent px-4 text-sm",
+                  footer: "text-center mt-4",
+                  footerActionText: "text-gray-300",
+                  formFieldRow: "mb-4",
+                },
+                layout: {
+                  socialButtonsPlacement: "top",
+                  socialButtonsVariant: "blockButton",
+                  showOptionalFields: false,
+                },
+                variables: {
+                  colorPrimary: "#ea580c",
+                  colorText: "#ffffff",
+                  colorTextSecondary: "#d1d5db",
+                  colorBackground: "transparent",
+                  colorInputBackground: "rgba(255, 255, 255, 0.1)",
+                  colorInputText: "#ffffff",
+                  borderRadius: "0.75rem",
+                }
+              }}
+            />
+          ) : (
+            <SignUp 
+              redirectUrl="/home"
+              signInUrl="#"
+              appearance={{
+                elements: {
+                  rootBox: "mx-auto w-full",
+                  card: "bg-white/10 backdrop-blur-md border border-white/20 shadow-xl rounded-xl p-6",
+                  headerTitle: "text-white text-xl font-bold text-center mb-2",
+                  headerSubtitle: "text-gray-200 text-sm text-center mb-6",
+                  formFieldInput: "bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/50 focus:bg-white/30 transition-all",
+                  formFieldLabel: "text-white font-medium mb-2 block",
+                  formButtonPrimary: "w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg",
+                  socialButtonsIconButton: "w-full bg-white/10 border border-white/30 hover:bg-white/20 hover:border-white/40 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 mb-4 flex items-center justify-center space-x-2",
+                  footerActionLink: "text-orange-300 hover:text-orange-200 font-medium transition-colors",
+                  dividerLine: "bg-white/20",
+                  dividerText: "text-gray-300 bg-transparent px-4",
+                  footer: "text-center mt-4",
+                  footerActionText: "text-gray-300",
+                  formFieldRow: "mb-4",
+                  socialButtonsBlockButton: "w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 px-6 rounded-lg transition-all duration-200 mb-4 flex items-center justify-center space-x-2 border border-gray-300",
+                },
+                layout: {
+                  socialButtonsPlacement: "top",
+                  socialButtonsVariant: "blockButton",
+                  showOptionalFields: true,
+                },
+                variables: {
+                  colorPrimary: "#ea580c",
+                  colorText: "#ffffff",
+                  colorTextSecondary: "#d1d5db",
+                  colorBackground: "transparent",
+                  colorInputBackground: "rgba(255, 255, 255, 0.1)",
+                  colorInputText: "#ffffff",
+                  borderRadius: "0.75rem",
+                }
+              }}
+            />
+          )}
+          
+          <div className="text-center mt-4">
+            <p className="text-gray-300 text-sm mb-2">
+              {!isSignUpMode ? "Don't have an account?" : "Already have an account?"}
+            </p>
+            {!isSignUpMode ? (
+              <Link
+                to="/signup"
+                className="text-orange-300 hover:text-orange-200 font-medium transition-colors underline"
+              >
+                Create one here
+              </Link>
+            ) : (
+              <button
+                onClick={() => setIsSignUpMode(false)}
+                className="text-orange-300 hover:text-orange-200 font-medium transition-colors underline"
+              >
+                Sign in instead
+              </button>
+            )}
+          </div>
+
+          <p className="text-gray-400 text-center text-xs mt-6 opacity-75">
+            Secured by Clerk • Development mode
+          </p>
         </div>
       </div>
     </div>

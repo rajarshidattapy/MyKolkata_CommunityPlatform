@@ -1,31 +1,42 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useContext, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-react';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('isAuthenticated') === 'true';
-  });
+  const { isSignedIn, signOut } = useClerkAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const previousAuthState = useRef(isSignedIn);
 
   useEffect(() => {
-    localStorage.setItem('isAuthenticated', isAuthenticated);
-  }, [isAuthenticated]);
+    // Only redirect when user transitions from not signed in to signed in
+    // and they're on an auth page
+    if (isSignedIn && !previousAuthState.current && user) {
+      const authPages = ['/', '/login', '/signup'];
+      
+      if (authPages.includes(location.pathname)) {
+        console.log('Redirecting newly signed in user to /home');
+        navigate('/home');
+      }
+    }
+    
+    previousAuthState.current = isSignedIn;
+  }, [isSignedIn, user, navigate, location.pathname]);
 
-  const login = () => {
-    setIsAuthenticated(true);
-    navigate('/home');
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
+  const logout = async () => {
+    await signOut();
     navigate('/');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated: isSignedIn, 
+      user,
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

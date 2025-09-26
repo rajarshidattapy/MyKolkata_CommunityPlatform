@@ -5,6 +5,7 @@ import TopNavbar from './components/TopNavbar';
 import DarkModeToggle from './components/DarkModeToggle';
 import UserMenu from './components/UserMenu';
 import Login from './pages/Login';
+import SignUp from './pages/SignUp';
 import Home from './pages/Home';
 import Places from './pages/Places';
 import Tinder from './pages/Tinder';
@@ -20,12 +21,12 @@ import ProtectedRoute from './components/ProtectedRoute';
 function AppContent() {
   const { isAuthenticated } = useAuth(); // Access the current authentication state
   const location = useLocation(); // Get the current route
-  const isLoginPage = location.pathname === '/'; // Check if we are on the login page
+  const isAuthPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/signup'; // Check if we are on auth pages
 
   return (
     <div className="min-h-screen pb-16">
-      {/* Show Navbar components only if user is authenticated and not on the login page */}
-      {isAuthenticated && !isLoginPage && (
+      {/* Show Navbar components only if user is authenticated and not on auth pages */}
+      {isAuthenticated && !isAuthPage && (
         <>
           <TopNavbar />
           <DarkModeToggle />
@@ -36,6 +37,8 @@ function AppContent() {
 
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
         <Route
           path="/home"
           element={
