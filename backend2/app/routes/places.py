@@ -13,6 +13,12 @@ async def get_places():
     """Get all places"""
     db = get_database()
     places = await db.places.find().to_list(100)
+    
+    # Convert ObjectId to string for each place
+    for place in places:
+        if "_id" in place:
+            place["_id"] = str(place["_id"])
+    
     return places
 
 @router.get("/{place_id}", response_model=Place)
@@ -25,6 +31,10 @@ async def get_place(place_id: str):
     place = await db.places.find_one({"_id": ObjectId(place_id)})
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
+    
+    # Convert ObjectId to string
+    if "_id" in place:
+        place["_id"] = str(place["_id"])
     
     return place
 
@@ -41,6 +51,10 @@ async def create_place(
     
     result = await db.places.insert_one(place_dict)
     created_place = await db.places.find_one({"_id": result.inserted_id})
+    
+    # Convert ObjectId to string
+    if created_place and "_id" in created_place:
+        created_place["_id"] = str(created_place["_id"])
     
     return created_place
 
@@ -73,6 +87,11 @@ async def update_place(
         raise HTTPException(status_code=404, detail="Place not found")
     
     updated_place = await db.places.find_one({"_id": ObjectId(place_id)})
+    
+    # Convert ObjectId to string
+    if updated_place and "_id" in updated_place:
+        updated_place["_id"] = str(updated_place["_id"])
+    
     return updated_place
 
 @router.delete("/{place_id}")

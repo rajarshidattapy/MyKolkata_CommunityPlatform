@@ -13,3 +13,6 @@ requests
 email-validator
 python-dateutil
 typing-extensions
+clerk-backend-api
+beautifulsoup4
+lxml

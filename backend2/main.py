@@ -8,15 +8,44 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
-from app.core.database import connect_to_mongo, close_mongo_connection
+from app.core.database import connect_to_mongo, close_mongo_connection, get_database
 from app.routes import auth, communities, marketplace, news, pandals, places, profile, regions, tinderProfiles, transport, contribute
+from app.seeder import DatabaseSeeder
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    logger.info("🚀 Starting MyKolkata FastAPI Backend...")
     await connect_to_mongo()
+    
+    # Auto-seed database with initial data
+    try:
+        database = get_database()
+        if database is not None:
+            seeder = DatabaseSeeder(database)
+            await seeder.seed_all_collections(force_reseed=False)
+            
+            # Log database statistics
+            stats = await seeder.get_database_stats()
+            logger.info("📊 Database Statistics:")
+            for collection, count in stats.items():
+                logger.info(f"   {collection}: {count} documents")
+        else:
+            logger.warning("⚠️ Database not connected, skipping seeding")
+            
+    except Exception as e:
+        logger.error(f"❌ Error during database seeding: {e}")
+    
+    logger.info("✅ Backend startup completed!")
     yield
+    
     # Shutdown
+    logger.info("🛑 Shutting down MyKolkata FastAPI Backend...")
     await close_mongo_connection()
 
 app = FastAPI(
@@ -55,6 +84,44 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "MyKolkata API"}
+
+@app.get("/database/stats")
+async def database_statistics():
+    """Get database collection statistics"""
+    try:
+        database = get_database()
+        if database is not None:
+            seeder = DatabaseSeeder(database)
+            stats = await seeder.get_database_stats()
+            return {
+                "status": "success",
+                "statistics": stats,
+                "total_documents": sum(stats.values())
+            }
+        else:
+            return {"status": "error", "message": "Database not connected"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/database/reseed")
+async def reseed_database(force: bool = False):
+    """Manually trigger database reseeding"""
+    try:
+        database = get_database()
+        if database is not None:
+            seeder = DatabaseSeeder(database)
+            total_seeded = await seeder.seed_all_collections(force_reseed=force)
+            stats = await seeder.get_database_stats()
+            return {
+                "status": "success", 
+                "message": f"Database reseeded successfully",
+                "documents_processed": total_seeded,
+                "statistics": stats
+            }
+        else:
+            return {"status": "error", "message": "Database not connected"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run(
