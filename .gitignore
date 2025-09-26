@@ -4,3 +4,11 @@ node_modules/
 backend/.env
 .env
 
+backend2/.env
+backend2/__pycache__/
+backend2/app/__pycache__/
+backend2/app/models/__pycache__/
+backend2/app/routes/__pycache__/    
+
+venv/
+dist/
